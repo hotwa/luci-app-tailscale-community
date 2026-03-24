@@ -52,6 +52,16 @@ grep -q 'debug prefs 2>/dev/null' "$INIT_FILE" || {
 	exit 1
 }
 
+grep -q "config_get desired_disable_magic_dns settings disable_magic_dns '1'" "$INIT_FILE" || {
+	echo "missing router-safe disable_magic_dns default"
+	exit 1
+}
+
+grep -q "Recommended on routers so dnsmasq, mosdns, or other local DNS forwarders keep control." "$JS_FILE" || {
+	echo "missing router-safe Disable MagicDNS guidance in LuCI"
+	exit 1
+}
+
 grep -q "desired/runtime/diagnostics" "$JS_FILE" || {
 	echo "missing desired/runtime/diagnostics health section"
 	exit 1

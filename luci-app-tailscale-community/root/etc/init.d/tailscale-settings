@@ -67,7 +67,7 @@ load_desired_settings() {
 	config_get desired_exit_node settings exit_node ''
 	config_get desired_exit_node_allow_lan_access settings exit_node_allow_lan_access '0'
 	config_get desired_ssh settings ssh '0'
-	config_get desired_disable_magic_dns settings disable_magic_dns '0'
+	config_get desired_disable_magic_dns settings disable_magic_dns '1'
 	config_get desired_shields_up settings shields_up '0'
 	config_get desired_runwebclient settings runwebclient '0'
 	config_get desired_nosnat settings nosnat '0'
