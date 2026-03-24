@@ -111,6 +111,14 @@ health_result="$(ts_compute_health)"
 assert_contains "$health_result" 'health=ok'
 assert_contains "$health_result" 'reason=ok'
 
+diag_self_active=0
+diag_self_in_engine=0
+diag_peer_route_status='ok'
+
+health_result="$(ts_compute_health)"
+assert_contains "$health_result" 'health=ok'
+assert_contains "$health_result" 'reason=ok'
+
 diag_peer_route_status='wan'
 health_result="$(ts_compute_health)"
 assert_contains "$health_result" 'health=fail'

@@ -99,11 +99,6 @@ ts_compute_health() {
 		return 0
 	fi
 
-	if [ "${diag_self_active:-0}" != "1" ] || [ "${diag_self_in_engine:-0}" != "1" ]; then
-		printf 'health=fail reason=runtime_mismatch'
-		return 0
-	fi
-
 	case "${diag_peer_route_status:-unavailable}" in
 		ok)
 			printf 'health=ok reason=ok'
@@ -118,6 +113,11 @@ ts_compute_health() {
 			return 0
 			;;
 	esac
+
+	if [ "${diag_self_active:-0}" != "1" ] || [ "${diag_self_in_engine:-0}" != "1" ]; then
+		printf 'health=fail reason=runtime_mismatch'
+		return 0
+	fi
 
 	printf 'health=warn reason=%s' "${diag_peer_route_status:-unknown}"
 }
