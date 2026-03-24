@@ -5,6 +5,7 @@ set -eu
 ROOT_DIR="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
 UCODE_FILE="$ROOT_DIR/luci-app-tailscale-community/root/usr/share/rpcd/ucode/tailscale.uc"
 JS_FILE="$ROOT_DIR/luci-app-tailscale-community/htdocs/luci-static/resources/view/tailscale.js"
+INIT_FILE="$ROOT_DIR/luci-app-tailscale-community/root/etc/init.d/tailscale-settings"
 
 [ -f "$UCODE_FILE" ] || {
 	echo "missing ucode file"
@@ -13,6 +14,11 @@ JS_FILE="$ROOT_DIR/luci-app-tailscale-community/htdocs/luci-static/resources/vie
 
 [ -f "$JS_FILE" ] || {
 	echo "missing LuCI view file"
+	exit 1
+}
+
+[ -f "$INIT_FILE" ] || {
+	echo "missing init script"
 	exit 1
 }
 
@@ -33,6 +39,16 @@ grep -q "callGetRuntime" "$JS_FILE" || {
 
 grep -q "callGetDiagnostics" "$JS_FILE" || {
 	echo "missing diagnostics RPC binding in LuCI"
+	exit 1
+}
+
+grep -q "read_json_command('tailscale debug prefs')" "$UCODE_FILE" || {
+	echo "missing tailscale debug prefs compatibility fallback in RPC runtime"
+	exit 1
+}
+
+grep -q 'debug prefs 2>/dev/null' "$INIT_FILE" || {
+	echo "missing tailscale debug prefs compatibility fallback in init script"
 	exit 1
 }
 

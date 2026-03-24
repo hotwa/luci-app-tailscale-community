@@ -63,22 +63,9 @@ ts_build_up_reset_args() {
 	ts_print_arg "--snat-subnet-routes=$(ts_bool_cli "$( [ "${desired_nosnat:-0}" = "1" ] && printf 0 || printf 1 )")"
 	ts_print_arg "--ssh=$(ts_bool_cli "${desired_ssh:-0}")"
 	ts_print_arg "--shields-up=$(ts_bool_cli "${desired_shields_up:-0}")"
-	ts_print_arg "--webclient=$(ts_bool_cli "${desired_runwebclient:-0}")"
-
-	if [ -n "${desired_hostname:-}" ]; then
-		ts_print_arg "--hostname=${desired_hostname}"
-	fi
 
 	if [ -n "$login_server" ]; then
 		ts_print_arg "--login-server=$login_server"
-	fi
-
-	if [ "${ts_supports_relay_server_port:-1}" = "1" ]; then
-		if [ "${desired_enable_relay:-0}" = "1" ]; then
-			ts_print_arg "--relay-server-port=${desired_relay_server_port:-40000}"
-		else
-			ts_print_arg '--relay-server-port='
-		fi
 	fi
 }
 

@@ -143,6 +143,7 @@ methods.get_runtime = {
 		uci.load('tailscale');
 		let runtime = normalize_runtime(
 			read_json_command('tailscale status --json') || {},
+			read_json_command('tailscale debug prefs') ||
 			read_json_command('tailscale debug prefs --json') || {}
 		);
 		runtime.fw_mode = split(uci.get('tailscale', 'settings', 'fw_mode'), ' ')[0] || 'nftables';

@@ -87,9 +87,17 @@ assert_contains "$up_args" '--login-server=https://headscale.example.com'
 assert_contains "$up_args" '--accept-routes=true'
 assert_contains "$up_args" '--accept-dns=false'
 assert_contains "$up_args" '--advertise-routes=192.168.11.0/24'
-assert_contains "$up_args" '--hostname=openwrt-router'
 assert_contains "$up_args" '--ssh=true'
 assert_not_contains "$up_args" '--auth-key'
+assert_not_contains "$up_args" '--webclient='
+assert_not_contains "$up_args" '--relay-server-port='
+assert_not_contains "$up_args" '--hostname='
+
+set_args="$(ts_build_set_args)"
+assert_contains "$set_args" 'set'
+assert_contains "$set_args" '--webclient=false'
+assert_contains "$set_args" '--relay-server-port=40000'
+assert_contains "$set_args" '--hostname=openwrt-router'
 
 diag_logged_in=1
 diag_self_active=1

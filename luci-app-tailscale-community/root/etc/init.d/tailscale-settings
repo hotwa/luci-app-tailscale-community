@@ -47,6 +47,10 @@ json_csv() {
 	jsonfilter_eval "$1" "$2" | tr ' ' '\n' | awk 'NF { print }' | paste -sd',' -
 }
 
+read_prefs_json() {
+	"$ts_bin" debug prefs 2>/dev/null || "$ts_bin" debug prefs --json 2>/dev/null || true
+}
+
 append_route() {
 	if [ -z "${desired_advertise_routes:-}" ]; then
 		desired_advertise_routes="$1"
@@ -84,9 +88,10 @@ load_desired_settings() {
 load_runtime_settings() {
 	local runtime_json status_json active_status_json runtime_routes
 
-	runtime_json=$("$ts_bin" debug prefs --json 2>/dev/null || true)
+	runtime_json="$(read_prefs_json)"
 	status_json=$("$ts_bin" status --json 2>/dev/null || true)
 	active_status_json=$("$ts_bin" status --json --active 2>/dev/null || true)
+	[ -n "$active_status_json" ] || active_status_json="$status_json"
 
 	runtime_accept_routes="$(json_bool_to_uci "$(jsonfilter_eval "$runtime_json" '@.RouteAll')")"
 	runtime_routes="$(json_csv "$runtime_json" '@.AdvertiseRoutes[@]')"
@@ -214,7 +219,7 @@ apply_settings() {
 	load_desired_settings
 	load_runtime_settings
 
-	local apply_mode generated_args ts_ver
+	local apply_mode generated_args set_args ts_ver ret
 	ts_ver=$("$ts_bin" version 2>/dev/null | head -n1)
 	ts_supports_relay_server_port='1'
 
@@ -241,7 +246,19 @@ $generated_args
 EOF
 
 	"$ts_bin" "$@"
-	local ret=$?
+	ret=$?
+	if [ "$ret" -eq 0 ] && [ "$apply_mode" = 'up-reset' ]; then
+		set_args="$(ts_build_set_args)"
+		set --
+		while IFS= read -r arg; do
+			[ -n "$arg" ] || continue
+			set -- "$@" "$arg"
+		done <<EOF
+$set_args
+EOF
+		"$ts_bin" "$@"
+		ret=$?
+	fi
 	[ $ret -eq 0 ] \
 		&& logger -t "$NAME" "Settings applied successfully" \
 		|| logger -t "$NAME" "Failed to apply settings (exit code: $ret)"
