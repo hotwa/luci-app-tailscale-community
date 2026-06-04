@@ -67,7 +67,19 @@ load_desired_settings() {
 	config_get desired_exit_node settings exit_node ''
 	config_get desired_exit_node_allow_lan_access settings exit_node_allow_lan_access '0'
 	config_get desired_ssh settings ssh '0'
-	config_get desired_disable_magic_dns settings disable_magic_dns '1'
+	config_get desired_dns_mode settings dns_mode ''
+	if [ -z "$desired_dns_mode" ]; then
+		config_get desired_disable_magic_dns settings disable_magic_dns '1'
+		[ "$desired_disable_magic_dns" = '1' ] && desired_dns_mode='disabled' || desired_dns_mode='magicdns'
+	fi
+	case "$desired_dns_mode" in
+		magicdns)
+			desired_disable_magic_dns='0'
+			;;
+		*)
+			desired_disable_magic_dns='1'
+			;;
+	esac
 	config_get desired_shields_up settings shields_up '0'
 	config_get desired_runwebclient settings runwebclient '0'
 	config_get desired_nosnat settings nosnat '0'
@@ -204,6 +216,51 @@ write_diagnostics() {
 EOF
 }
 
+# Add/remove DNS forward entry in dnsmasq for MagicDNS via OpenWrt
+setup_tailscale_dns_forward() {
+	if [ ! -x /usr/sbin/tailscale ] && [ ! -x /usr/bin/tailscale ]; then
+		return 0
+	fi
+
+	local entry="/.ts.net/100.100.100.100"
+	local found=0
+
+	# Check if entry already exists in dnsmasq
+	if uci -q show dhcp.@dnsmasq[0].server 2>/dev/null | grep -Fqx "dhcp.@dnsmasq[0].server='$entry'"; then
+		found=1
+	fi
+
+	if [ "$found" = "0" ]; then
+		uci add_list dhcp.@dnsmasq[0].server="$entry"
+		uci commit dhcp
+		/etc/init.d/dnsmasq reload 2>/dev/null || /etc/init.d/dnsmasq restart 2>/dev/null
+		logger -t "$NAME" "Added DNS forward: $entry"
+	fi
+}
+
+remove_tailscale_dns_forward() {
+	local entry="/.ts.net/100.100.100.100"
+	local idx=0
+	local removed=0
+	while true; do
+		local val
+		val=$(uci -q get dhcp.@dnsmasq[0].server."${idx}" 2>/dev/null)
+		[ -z "$val" ] && break
+		if [ "$val" = "$entry" ]; then
+			uci -q del_list dhcp.@dnsmasq[0].server="$entry"
+			removed=1
+			break
+		fi
+		idx=$((idx + 1))
+	done
+
+	if [ "$removed" = "1" ]; then
+		uci commit dhcp
+		/etc/init.d/dnsmasq reload 2>/dev/null || /etc/init.d/dnsmasq restart 2>/dev/null
+		logger -t "$NAME" "Removed Tailscale DNS forward entry: $entry"
+	fi
+}
+
 apply_settings() {
 	local ts_bin
 	if [ -x /usr/sbin/tailscale ]; then
@@ -220,6 +277,15 @@ apply_settings() {
 	load_runtime_settings
 
 	local apply_mode generated_args set_args ts_ver ret
+	case "$desired_dns_mode" in
+		openwrt_forward)
+			setup_tailscale_dns_forward
+			;;
+		*)
+			remove_tailscale_dns_forward
+			;;
+	esac
+
 	ts_ver=$("$ts_bin" version 2>/dev/null | head -n1)
 	ts_supports_relay_server_port='1'
 
@@ -286,7 +352,7 @@ handle_service_state() {
 }
 
 start_service() {
-	handle_service_state
+	apply_settings
 }
 
 service_triggers() {

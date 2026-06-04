@@ -1,0 +1,9 @@
+* text=auto
+
+*.sh text eol=lf
+*.uc text eol=lf
+*.js text eol=lf
+Makefile text eol=lf
+
+luci-app-tailscale-community/root/etc/init.d/* text eol=lf
+luci-app-tailscale-community/root/usr/libexec/* text eol=lf
